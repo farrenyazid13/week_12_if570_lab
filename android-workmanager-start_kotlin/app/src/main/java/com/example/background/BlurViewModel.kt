@@ -61,6 +61,7 @@ class BlurViewModel(application: Application) : ViewModel() {
 
         // Add WorkRequest to save the image to the filesystem
         val save = OneTimeWorkRequestBuilder<SaveImageToFileWorker>()
+            .addTag(TAG_OUTPUT)
             .build()
 
         continuation = continuation.then(save)
@@ -108,6 +109,17 @@ class BlurViewModel(application: Application) : ViewModel() {
         outputUri = uriOrNull(outputImageUri)
     }
 
+    // New instance variable for the WorkInfo
+    internal val outputWorkInfos: LiveData<List<WorkInfo>>
+
+    // Modify the existing init block in the BlurViewModel class to this:
+    init {
+        imageUri = getImageUri(application.applicationContext)
+        // This transformation makes sure that whenever the current work Id changes the WorkInfo
+        // the UI is listening to changes
+        outputWorkInfos = workManager.getWorkInfosByTagLiveData(TAG_OUTPUT)
+    }
+
     class BlurViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
 
         override fun <T : ViewModel?> create(modelClass: Class<T>): T {
@@ -117,5 +129,9 @@ class BlurViewModel(application: Application) : ViewModel() {
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
         }
+    }
+
+    internal fun cancelWork() {
+        workManager.cancelUniqueWork(IMAGE_MANIPULATION_WORK_NAME)
     }
 }
